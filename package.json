@@ -1,0 +1,30 @@
+{
+  "name": "sbp",
+  "version": "4.8.0",
+  "description": "libsbp bindings for JavaScript. More information here: http://swift-nav.github.io/libsbp/",
+  "files": [
+    "javascript/*",
+    "spec/*"
+  ],
+  "main": "javascript/sbp/index.js",
+  "scripts": {
+    "test": "node --version; cd javascript && mocha --exit -R spec tests",
+    "webpack": "webpack --config ./javascript/webpack.config.js"
+  },
+  "author": "dev@swift-nav.com",
+  "license": "MIT",
+  "dependencies": {
+    "binary-parser": "^1.7.0",
+    "cuint": "^0.2.2",
+    "js-yaml": "^3.13.1",
+    "node-int64": "^0.4.0"
+  },
+  "devDependencies": {
+    "benchmark": "^2.1.4",
+    "mocha": "^7.2.0",
+    "request": "^2.88.0",
+    "serialport": "^9.0.7",
+    "webpack": "^4.26.1",
+    "webpack-cli": "^3.3.12"
+  }
+}

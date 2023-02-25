@@ -1,0 +1,383 @@
+/*
+ * Copyright (C) 2021 Swift Navigation Inc.
+ * Contact: https://support.swiftnav.com
+ *
+ * This source is subject to the license found in the file 'LICENSE' which must
+ * be be distributed together with this source. All other rights reserved.
+ *
+ * THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+ * EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
+ */
+
+syntax = "proto3";
+
+/** Ssr
+ *
+ * Precise State Space Representation (SSR) corrections format
+ */
+
+package swiftnav.sbp.ssr;
+
+import "gnss.proto";
+
+/** SSR code biases corrections for a particular satellite
+ *
+ * Code biases are to be added to pseudorange. The corrections conform with
+ * RTCMv3 MT 1059 / 1065.
+ */
+message CodeBiasesContent {
+    uint32 code = 1;
+    sint32 value = 2;
+}
+
+/** SSR phase biases corrections for a particular satellite
+ *
+ * Phase biases are to be added to carrier phase measurements.
+ */
+message PhaseBiasesContent {
+    uint32 code = 1;
+    uint32 integer_indicator = 2;
+    uint32 widelane_integer_indicator = 3;
+    uint32 discontinuity_counter = 4;
+    sint32 bias = 5;
+}
+
+/** Header for the MSG_SSR_STEC_CORRECTION message
+ *
+ * A full set of STEC information will likely span multiple SBP messages,
+ * since SBP message a limited to 255 bytes.  The header is used to tie
+ * multiple SBP messages into a sequence.
+ */
+message STECHeader {
+    uint32 tile_set_id = 1;
+    uint32 tile_id = 2;
+    gnss.GpsTimeSec time = 3;
+    uint32 num_msgs = 4;
+    uint32 seq_num = 5;
+    uint32 update_interval = 6;
+    uint32 iod_atmo = 7;
+}
+
+/** Header for the MSG_SSR_GRIDDED_CORRECTION message
+ *
+ * The LPP message contains nested variable length arrays which are not
+ * supported in SBP, so each grid point will be identified by the index.
+ */
+message GriddedCorrectionHeader {
+    uint32 tile_set_id = 1;
+    uint32 tile_id = 2;
+    gnss.GpsTimeSec time = 3;
+    uint32 num_msgs = 4;
+    uint32 seq_num = 5;
+    uint32 update_interval = 6;
+    uint32 iod_atmo = 7;
+    uint32 tropo_quality_indicator = 8;
+}
+
+/** None
+ *
+ * STEC polynomial for the given satellite.
+ */
+message STECSatElement {
+    SvId sv_id = 1;
+    uint32 stec_quality_indicator = 2;
+    repeated sint32 stec_coeff = 3;
+}
+
+/** None
+ *
+ * Troposphere vertical delays at the grid point.
+ */
+message TroposphericDelayCorrectionNoStd {
+    sint32 hydro = 1;
+    sint32 wet = 2;
+}
+
+/** None
+ *
+ * Troposphere vertical delays (mean and standard deviation) at the grid
+ * point.
+ */
+message TroposphericDelayCorrection {
+    sint32 hydro = 1;
+    sint32 wet = 2;
+    uint32 stddev = 3;
+}
+
+/** None
+ *
+ * STEC residual for the given satellite at the grid point.
+ */
+message STECResidualNoStd {
+    SvId sv_id = 1;
+    sint32 residual = 2;
+}
+
+/** None
+ *
+ * STEC residual (mean and standard deviation) for the given satellite at the
+ * grid point.
+ */
+message STECResidual {
+    SvId sv_id = 1;
+    sint32 residual = 2;
+    uint32 stddev = 3;
+}
+
+/** Precise orbit and clock correction
+ *
+ * The precise orbit and clock correction message is to be applied as a delta
+ * correction to broadcast ephemeris and is an equivalent to the 1060 /1066
+ * RTCM message types.
+ */
+message MsgSsrOrbitClock {
+    gnss.GpsTimeSec time = 1;
+    gnss.GnssSignal sid = 2;
+    uint32 update_interval = 3;
+    uint32 iod_ssr = 4;
+    uint32 iod = 5;
+    sint32 radial = 6;
+    sint32 along = 7;
+    sint32 cross = 8;
+    sint32 dot_radial = 9;
+    sint32 dot_along = 10;
+    sint32 dot_cross = 11;
+    sint32 c0 = 12;
+    sint32 c1 = 13;
+    sint32 c2 = 14;
+}
+
+/** Precise code biases correction
+ *
+ * The precise code biases message is to be added to the pseudorange of the
+ * corresponding signal to get corrected pseudorange. It is an equivalent to
+ * the 1059 / 1065 RTCM message types.
+ */
+message MsgSsrCodeBiases {
+    gnss.GpsTimeSec time = 1;
+    gnss.GnssSignal sid = 2;
+    uint32 update_interval = 3;
+    uint32 iod_ssr = 4;
+    repeated CodeBiasesContent biases = 5;
+}
+
+/** Precise phase biases correction
+ *
+ * The precise phase biases message contains the biases to be added to the
+ * carrier phase of the corresponding signal to get corrected carrier phase
+ * measurement, as well as the satellite yaw angle to be applied to compute
+ * the phase wind-up correction. It is typically an equivalent to the 1265
+ * RTCM message types.
+ */
+message MsgSsrPhaseBiases {
+    gnss.GpsTimeSec time = 1;
+    gnss.GnssSignal sid = 2;
+    uint32 update_interval = 3;
+    uint32 iod_ssr = 4;
+    uint32 dispersive_bias = 5;
+    uint32 mw_consistency = 6;
+    uint32 yaw = 7;
+    sint32 yaw_rate = 8;
+    repeated PhaseBiasesContent biases = 9;
+}
+
+/** Header for the Bounds messages
+ *
+None
+ */
+message BoundsHeader {
+    gnss.GpsTimeSec time = 1;
+    uint32 num_msgs = 2;
+    uint32 seq_num = 3;
+    uint32 update_interval = 4;
+    uint32 sol_id = 5;
+}
+
+/** STEC correction polynomial coefficients
+ *
+None
+ */
+message MsgSsrStecCorrection {
+    BoundsHeader header = 1;
+    uint32 ssr_iod_atmo = 2;
+    uint32 tile_set_id = 3;
+    uint32 tile_id = 4;
+    uint32 n_sats = 5;
+    repeated STECSatElement stec_sat_list = 6;
+}
+
+/** Gridded troposphere and STEC correction residuals
+ *
+ * STEC residuals are per space vehicle, troposphere is not.
+ *
+ * It is typically equivalent to the QZSS CLAS Sub Type 9 messages.
+ */
+message MsgSsrGriddedCorrection {
+    GriddedCorrectionHeader header = 1;
+    uint32 index = 2;
+    TroposphericDelayCorrection tropo_delay_correction = 3;
+    repeated STECResidual stec_residuals = 4;
+}
+
+/** None
+ *
+ * STEC polynomial and bounds for the given satellite.
+ */
+message STECSatElementIntegrity {
+    STECResidual stec_residual = 1;
+    uint32 stec_bound_mu = 2;
+    uint32 stec_bound_sig = 3;
+    uint32 stec_bound_mu_dot = 4;
+    uint32 stec_bound_sig_dot = 5;
+}
+
+/** Gridded troposhere and STEC correction residuals bounds
+ *
+ * Note 1: Range: 0-17.5 m. i<= 200, mean = 0.01i; 200<i<=230,
+ * mean=2+0.1(i-200); i>230, mean=5+0.5(i-230).
+ */
+message MsgSsrGriddedCorrectionBounds {
+    BoundsHeader header = 1;
+    uint32 ssr_iod_atmo = 2;
+    uint32 tile_set_id = 3;
+    uint32 tile_id = 4;
+    uint32 tropo_qi = 5;
+    uint32 grid_point_id = 6;
+    TroposphericDelayCorrection tropo_delay_correction = 7;
+    uint32 tropo_v_hydro_bound_mu = 8;
+    uint32 tropo_v_hydro_bound_sig = 9;
+    uint32 tropo_v_wet_bound_mu = 10;
+    uint32 tropo_v_wet_bound_sig = 11;
+    uint32 n_sats = 12;
+    repeated STECSatElementIntegrity stec_sat_list = 13;
+}
+
+/** Definition of a SSR atmospheric correction tile.
+
+ *
+ * Provides the correction point coordinates for the atmospheric correction
+ * values in the MSG_SSR_STEC_CORRECTION and MSG_SSR_GRIDDED_CORRECTION
+ * messages.
+ *
+ * Based on ETSI TS 137 355 V16.1.0 (LTE Positioning Protocol) information
+ * element GNSS-SSR-CorrectionPoints. SBP only supports gridded arrays of
+ * correction points, not lists of points.
+ */
+message MsgSsrTileDefinition {
+    uint32 ssr_sol_id = 1;
+    uint32 tile_set_id = 2;
+    uint32 tile_id = 3;
+    sint32 corner_nw_lat = 4;
+    sint32 corner_nw_lon = 5;
+    uint32 spacing_lat = 6;
+    uint32 spacing_lon = 7;
+    uint32 rows = 8;
+    uint32 cols = 9;
+    uint64 bitmask = 10;
+}
+
+/** Antenna phase center correction
+ *
+ * Contains phase center offset and elevation variation corrections for one
+ * signal on a satellite.
+ */
+message SatelliteAPC {
+    gnss.GnssSignal sid = 1;
+    uint32 sat_info = 2;
+    uint32 svn = 3;
+    repeated sint32 pco = 4;
+    repeated sint32 pcv = 5;
+}
+
+/** Satellite antenna phase center corrections
+ *
+None
+ */
+message MsgSsrSatelliteApc {
+    repeated SatelliteAPC apc = 1;
+}
+
+/** None
+ *
+ * Orbit and clock bound.
+ */
+message OrbitClockBound {
+    uint32 sat_id = 1;
+    uint32 orb_radial_bound_mu = 2;
+    uint32 orb_along_bound_mu = 3;
+    uint32 orb_cross_bound_mu = 4;
+    uint32 orb_radial_bound_sig = 5;
+    uint32 orb_along_bound_sig = 6;
+    uint32 orb_cross_bound_sig = 7;
+    uint32 clock_bound_mu = 8;
+    uint32 clock_bound_sig = 9;
+}
+
+/** Combined Orbit and Clock Bound
+ *
+ * Note 1: Range: 0-17.5 m. i<=200, mean=0.01i; 200<i<=230, mean=2+0.1(i-200);
+ * i>230, mean=5+0.5(i-230).
+ *
+ * Note 2: Range: 0-17.5 m. i<=200, std=0.01i; 200<i<=230, std=2+0.1(i-200)
+ * i>230, std=5+0.5(i-230).
+ */
+message MsgSsrOrbitClockBounds {
+    BoundsHeader header = 1;
+    uint32 ssr_iod = 2;
+    uint32 const_id = 3;
+    uint32 n_sats = 4;
+    repeated OrbitClockBound orbit_clock_bounds = 5;
+}
+
+/** Code and Phase Biases Bounds per Satellite-Signal couple
+ *
+None
+ */
+message CodePhaseBiasesSatSig {
+    uint32 sat_id = 1;
+    uint32 signal_id = 2;
+    uint32 code_bias_bound_mu = 3;
+    uint32 code_bias_bound_sig = 4;
+    uint32 phase_bias_bound_mu = 5;
+    uint32 phase_bias_bound_sig = 6;
+}
+
+/** Combined Code and Phase Biases Bounds
+ *
+None
+ */
+message MsgSsrCodePhaseBiasesBounds {
+    BoundsHeader header = 1;
+    uint32 ssr_iod = 2;
+    uint32 const_id = 3;
+    uint32 n_sats_signals = 4;
+    repeated CodePhaseBiasesSatSig satellites_signals = 5;
+}
+
+/** None
+ *
+ * Orbit and clock bound degradation.
+ */
+message OrbitClockBoundDegradation {
+    uint32 orb_radial_bound_mu_dot = 1;
+    uint32 orb_along_bound_mu_dot = 2;
+    uint32 orb_cross_bound_mu_dot = 3;
+    uint32 orb_radial_bound_sig_dot = 4;
+    uint32 orb_along_bound_sig_dot = 5;
+    uint32 orb_cross_bound_sig_dot = 6;
+    uint32 clock_bound_mu_dot = 7;
+    uint32 clock_bound_sig_dot = 8;
+}
+
+/** Combined Orbit and Clock Bound Degradation Parameter
+ *
+None
+ */
+message MsgSsrOrbitClockBoundsDegradation {
+    BoundsHeader header = 1;
+    uint32 ssr_iod = 2;
+    uint32 const_id = 3;
+    uint64 sat_bitmask = 4;
+    OrbitClockBoundDegradation orbit_clock_bounds_degradation = 5;
+}

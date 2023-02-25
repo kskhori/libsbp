@@ -1,0 +1,227 @@
+#!/usr/bin/env python
+# Copyright (C) 2015-2021 Swift Navigation Inc.
+# Contact: https://support.swiftnav.com
+#
+# This source is subject to the license found in the file 'LICENSE' which must
+# be be distributed together with this source. All other rights reserved.
+#
+# THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND,
+# EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
+
+
+"""
+(((description|comment_links|commentify(indent=0) )))
+"""
+
+((* if msgs|has_real_message -*))
+import json
+
+import construct
+
+from sbp.msg import SBP, SENDER_ID
+from sbp.utils import fmt_repr, exclude_fields, walk_json_dict, containerize
+((*- else -*))
+import construct
+
+from sbp.utils import fmt_repr
+((*- endif -*))
+
+((*- for (file, ident) in include *))
+  ((*- if ident is list *))
+from (((module_path))).(((file))) import ((* for name in ident -*))((( name )))((*- if not loop.last *)), ((* endif -*))((*- endfor *))
+  ((*- else *))
+from (((module_path))).(((file))) import *
+  ((*- endif *))
+((*- endfor *))
+
+# Automatically generated from piksi/yaml/(((filepath))) with generate.py.
+# Please do not hand edit!
+
+((* for m in msgs *))
+  ((*- if m.static *))
+    ((*- if not m.is_real_message *))
+class ((( m.identifier )))(object):
+  """(((m.identifier))).
+  ((* if m.desc *))
+  ((( m.desc | commentify )))
+  ((*- endif *))
+  ((* if m.fields *))
+  Parameters
+  ----------
+  ((*- for f in m.fields *))
+  (((f.identifier))) : (((f.type_id|pydoc)))
+  ((*- if f.desc *))
+    ((( f.desc | commentify(width=74, indent=4) )))
+  ((*- endif *))
+  ((*- endfor *))
+  ((*- endif *))
+
+  """
+  ((*- if m.fields *))
+  _parser = construct.Struct(
+                     ((*- for f in m.fields *))
+                     ((( f | construct_py ))),
+                     ((*- endfor *)))
+  __slots__ = [((* for f in m.fields *))
+               '((( f.identifier )))',
+               ((*- endfor *))
+              ]
+  ((*- endif *))
+
+  def __init__(self, payload=None, **kwargs):
+    if payload:
+      ((*- if m.fields *))
+      self.from_binary(payload)
+      ((*- else *))
+      self.payload = payload
+      ((*- endif *))
+      ((*- if m.fields *))
+    else:
+        ((*- for f in m.fields *))
+      self.(((f.identifier))) = kwargs.pop('(((f.identifier)))')
+        ((*- endfor *))
+      ((*- endif *))
+
+  def __repr__(self):
+    return fmt_repr(self)
+  ((* if m.fields *))
+  def from_binary(self, d):
+    p = ((( m.identifier )))._parser.parse(d)
+    for n in self.__class__.__slots__:
+      setattr(self, n, getattr(p, n))
+  ((*- endif *))
+    ((* endif *))
+  ((*- endif *))
+((*- endfor *))
+
+((*- for m in msgs *))
+  ((*- if m.static *))
+    ((*- if m.is_real_message *))
+SBP_(((m.identifier))) = ((('0x%04X'|format(m.sbp_id))))
+class ((( m.identifier | classnameify )))(SBP):
+  ((* if m is needs_raw_docstring *))r((* endif *))"""SBP class for message (((m.identifier))) ((('(0x%04X)'|format(m.sbp_id)))).
+
+  You can have (((m.identifier))) inherit its fields directly
+  from an inherited SBP object, or construct it inline using a dict
+  of its fields.
+
+  ((* if m.desc *))
+  (((m.desc | commentify )))
+  ((*- endif *))
+
+  ((*- if m.fields*))
+
+  Parameters
+  ----------
+  sbp : SBP
+    SBP parent object to inherit from.
+  ((*- for f in m.fields *))
+  (((f.identifier))) : (((f.type_id|pydoc)))
+  ((*- if f.desc *))
+    (((f.desc | commentify(width=74, indent=4) )))
+  ((*- endif *))
+  ((*- endfor *))
+  sender : int
+    Optional sender ID, defaults to SENDER_ID (see sbp/msg.py).
+  ((*- endif *))
+
+  """
+  ((*- if m.fields *))
+  _parser = construct.Struct(
+                   ((*- for f in m.fields *))
+                   ((( f | construct_py ))),
+                   ((*- endfor *)))
+  __slots__ = [((* for f in m.fields *))
+               '((( f.identifier )))',
+               ((*- endfor *))
+              ]
+  ((*- else *))
+  __slots__ = []
+  ((*- endif *))
+
+  def __init__(self, sbp=None, **kwargs):
+    if sbp:
+      super( ((( m.identifier | classnameify ))),
+             self).__init__(sbp.msg_type, sbp.sender, sbp.length,
+                            sbp.payload, sbp.crc)
+      ((*- if m.fields *))
+      self.from_binary(sbp.payload)
+      ((*- else *))
+      self.payload = sbp.payload
+      ((*- endif *))
+    else:
+      super( ((( m.identifier | classnameify ))), self).__init__()
+      self.msg_type = SBP_(((m.identifier)))
+      self.sender = kwargs.pop('sender', SENDER_ID)
+    ((*- if m.fields*))
+      ((*- for f in m.fields *))
+      self.(((f.identifier))) = kwargs.pop('(((f.identifier)))')
+      ((*- endfor *))
+    ((*- else *))
+      self.payload = b""
+    ((*- endif *))
+
+  def __repr__(self):
+    return fmt_repr(self)
+
+  @staticmethod
+  def from_json(s):
+    """Given a JSON-encoded string s, build a message object.
+
+    """
+    d = json.loads(s)
+    return ((( m.identifier | classnameify ))).from_json_dict(d)
+
+  @staticmethod
+  def from_json_dict(d):
+    sbp = SBP.from_json_dict(d)
+    return ((( m.identifier | classnameify )))(sbp, **d)
+
+ ((* if m.fields *))
+  def from_binary(self, d):
+    """Given a binary payload d, update the appropriate payload fields of
+    the message.
+
+    """
+    p = ((( m.identifier | classnameify )))._parser.parse(d)
+    for n in self.__class__.__slots__:
+      setattr(self, n, getattr(p, n))
+
+  def to_binary(self):
+    """Produce a framed/packed SBP message.
+
+    """
+    c = containerize(exclude_fields(self))
+    self.payload = ((( m.identifier | classnameify )))._parser.build(c)
+    return self.pack()
+
+  def into_buffer(self, buf, offset):
+    """Produce a framed/packed SBP message into the provided buffer and offset.
+
+    """
+    self.payload = containerize(exclude_fields(self))
+    self.parser = ((( m.identifier | classnameify )))._parser
+    self.stream_payload.reset(buf, offset)
+    return self.pack_into(buf, offset, self._build_payload)
+
+  def to_json_dict(self):
+    self.to_binary()
+    d = super( ((( m.identifier | classnameify ))), self).to_json_dict()
+    j = walk_json_dict(exclude_fields(self))
+    d.update(j)
+    return d
+    ((*- endif *))
+    ((* endif *))
+  ((*- else *))
+  ((*- endif *))
+
+((*- endfor *))
+
+msg_classes = {
+((*- for m in msgs *))
+  ((*- if m.is_real_message *))
+  ((('0x%04X'|format(m.sbp_id)))): ((( m.identifier | classnameify ))),
+  ((*- endif*))
+((*- endfor *))
+}

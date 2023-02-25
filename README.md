@@ -1,92 +1,270 @@
-# libsbp
+## Specification and Bindings for Swift Binary Protocol
 
+<!-- toc -->
 
+- [Installing sbp2json, json2sbp, json2json and related tools](#installing-sbp2json-json2sbp-json2json-and-related-tools)
+- [Building / installing](#building--installing)
+  * [Using Docker](#using-docker)
+    + [Fetching the prebuilt image from DockerHub](#fetching-the-prebuilt-image-from-dockerhub)
+    + [Creating your own image](#creating-your-own-image)
+    + [Using the docker image](#using-the-docker-image)
+  * [Installing from package managers](#installing-from-package-managers)
+  * [Installing development Python versions](#installing-development-python-versions)
+  * [Adding development version as a pip dependency](#adding-development-version-as-a-pip-dependency)
+  * [Installing from source](#installing-from-source)
+- [SBP Development Procedures](#sbp-development-procedures)  
+- [SBP Protocol Specification](#sbp-protocol-specification)
+- [JSON Schema Definitions](#json-schema-definitions)
+- [LICENSE](#license)
 
-## Getting started
+<!-- tocstop -->
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The Swift Navigation Binary Protocol (SBP) is a fast, simple, and minimal
+binary protocol for communicating with Swift devices. It is the native binary
+protocol used by the [Piksi GPS receiver](http://swiftnav.com/piksi.html) to
+transmit solutions, observations, status and debugging messages, as well as
+receive messages from the host operating system, such as differential
+corrections and the almanac.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+This project provides language-agnostic specification and documentation for
+messages used with SBP, a compiler for generating message bindings, and client
+libraries in a variety of languages. This repository is organized into the
+following directory structure:
 
-## Add your files
+* [`docs`](./docs): Protocol documentation and message definitions.
+* [`spec`](./spec): Machine readable protocol specification in
+  [YAML](http://en.wikipedia.org/wiki/YAML).
+* [`generator`](./generator): Simple, template-based generator for
+  different languages.
+* [`python`](./python): Python client and examples.
+* [`c`](./c): C client library and examples.
+* [`haskell`](./haskell): Haskell client and examples.
+* [`java`](./java): Java client library and examples.
+* [`javascript`](./javascript): JavaScript client library and examples.
+* [`rust`](./rust): Rust client library and examples.
+* [`sbpjson`](./sbpjson): Tools for parsing SBP-JSON.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+Except for the `generator`, all of the above are generated and should not be modified directly.
+
+## Installing sbp2json, json2sbp, json2json and related tools
+
+This repository also provides the following utilities for comprehending and
+inspecting SBP data:
+
+- `sbp2json`: converts SBP binary into a JSON representation, in which field
+  names and values are expanded into JSON objects, common fields such as
+  "message type" and "payload" are included as well.
+
+- `json2sbp`: uses the "message type", "payload" and related fields from an SBP
+  JSON stream to reconstruct the binary representation.
+
+- `json2json`: some tools (notably the Swift GUI Console) produce abbreviated
+  JSON logs with only common fields such as "message type" and "payload", the
+  `json2json` tool expands these JSON objects to include fields specific the
+  individual message.
+
+To install a released version of these tools, visit the [releases
+page](https://github.com/swift-nav/libsbp/releases) and download an archive for
+your platform.
+
+To install from source, you can use Rust's cargo tool (first [install
+Rust](https://www.rust-lang.org/tools/install)), then run:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.cds.tohoku.ac.jp/horippy/libsbp.git
-git branch -M main
-git push -uf origin main
+cargo install --git https://github.com/swift-nav/libsbp.git --bins
 ```
 
-## Integrate with your tools
+There's also a [Haskell version](./haskell) available which can be installed by
+running `stack install` in the [./haskell](./haskell) directory of a checkout
+of this repo (after [installing
+stack](https://docs.haskellstack.org/en/stable/README/)) or by visiting the
+releases by and downloading an `sbp_tools_haskell` archive.  This variant of
+the tools predate the Rust and Python versions, and also includes an `sbp2yaml`
+tool as well as a `sbp2prettyjson` tool.
 
-- [ ] [Set up project integrations](https://gitlab.cds.tohoku.ac.jp/horippy/libsbp/-/settings/integrations)
+Finally, a Python version of the `sbp2json` tool exists, which is installable
+on any platform that supports Python via pip, e.g.:
 
-## Collaborate with your team
+```
+pip3 install sbp
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+The tool can then be invoked as follows:
 
-## Test and Deploy
+```
+python3 -m sbp2json <sbp.bin
+```
 
-Use the built-in continuous integration in GitLab.
+The performance of the Python version is significantly slower than Rust and Haskell,
+but works on all platforms that Python itself supports.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## Building / installing
 
-***
+Before you start, run 
+```
+git pull --tags
+```
+in you local libsbp repository to pull the tags. This will ensure the correct
+version number is generated.
 
-# Editing this README
+### Using Docker
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+Before you begin, make sure you have [Docker](https://docs.docker.com/docker-for-mac/install/) installed.
+Start [Docker desktop](https://docs.docker.com/docker-for-mac/).
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+#### Fetching the prebuilt image from DockerHub
 
-## Name
-Choose a self-explaining name for your project.
+The quickest method to get going is to just pull a prebuilt copy from DockerHub
+(no guarantees on freshness) by running the following on your command line:
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+    docker run --rm -v $PWD:/mnt/workspace -i -t swiftnav/libsbp-build:2022-06-14 /bin/bash
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+This will mount your local copy of the libsbp repository onto the image.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Check this [link](https://hub.docker.com/r/swiftnav/libsbp-build/tags) for newer tags.
+Alternatively, you could run
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+    docker run --rm -v $PWD:/mnt/workspace -i -t swiftnav/libsbp-build:latest-master /bin/bash
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+if you are facing issues with compilation and the tags are out of date as well.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+#### Creating your own image
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Otherwise, the `Dockerfile` will create a docker image that contains all the
+necessary dependencies to build libsbp.  You can make a local image fresh from
+this file by running `docker build` as such:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+    docker build -t libsbp-build - <Dockerfile
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Reading the Dockerfile from STDIN prevents docker from pulling in the whole
+repostory into the build context (which is then immediately discarded anyway).
+You can customize the UID of the user that's created with the docker image
+by passing the desired `UID` value to the build:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+    docker build -t libsbp-build --build-arg UID=1234 - <Dockerfile
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+You can then make this image operate on your local workspace like this:
 
-## License
-For open source projects, say how it is licensed.
+    docker run --rm -v $PWD:/mnt/workspace -i -t libsbp-build:latest /bin/bash
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+#### Using the docker image
+
+Once in the image, simply type `make all` to generate all the libsbp bindings.
+This could take several hours to run.  Alternately, the docker image will run
+the `make all` command by default, so you can kick off the `make all` process
+by simply running the following command:
+
+    docker run --rm -v $PWD:/mnt/workspace -i -t libsbp-build:2022-06-14
+
+To speed up this process you can attempt to run Python environment tests in
+paralell with:
+
+    docker run --rm -v $PWD:/mnt/workspace -i -t -e SBP_TOX_PARALLEL=auto libsbp-build:2022-06-14
+
+When you are finished, quit Docker so that it would not unnecessarily use up
+resources on your machine.
+
+If you run into issues during the generation process, try running `make clean`.
+Alternatively, you could recompile from a clean, newly-cloned libsbp repository
+on your machine, which would minimize the chance of running into compilation
+issues from an old build.
+
+### Installing from package managers
+
+Some bindings are available on package managers:
+
+* [`python`](https://github.com/swift-nav/libsbp/tree/HEAD/python): available on pip
+* [`haskell`](https://github.com/swift-nav/libsbp/tree/HEAD/haskell): available on Hackage
+* [`javascript`](https://github.com/swift-nav/libsbp/tree/HEAD/javascript): available on NPM
+
+### Installing development Python versions
+
+To install the Python binding from source (using pip) run the following command:
+
+```sh
+pip install 'file:///path/to/libsbp#subdirectory=python'
+```
+
+Or via setuptools directly:
+```sh
+cd /path/to/libsbp
+cd python
+python setup.py
+```
+
+### Adding development version as a pip dependency
+
+Run the following command:
+```sh
+pip install git+https://github.com/swift-nav/libsbp@<GIT_REVISION>#egg=sbp&subdirectory=python
+```
+
+Or add this to `requirements.txt`:
+```
+git+https://github.com/swift-nav/libsbp@<GIT_REVISION>#egg=sbp&subdirectory=python
+```
+
+### Installing from source
+You can build one binding at a time or update all at once:
+
+```
+make python
+```
+
+or
+
+```
+make all
+```
+
+are both valid. To see a list of all valid targets, run `make help`.
+
+**Python version notes:**
+1. By default the Python targets `make python` and `make test-python` (as well
+   as `make all`) run tests on all Python versions officially supported by *the
+   libsbp Python bindings*, currently **3.6-3.9**, skipping any versions not
+   installed. To run tests on just specific Python version(s), specify the
+   `TOXENV` environment variable, e.g., `TOXENV=py36 make python`. Travis runs
+   Python tests on all supported versions.
+2. By default *the code generators* are run on the system's (or virtual env's)
+   default Python interpreter. Currently Python versions **2.7, 3.5, and 3.7**
+   are officially supported, other versions may or may not work. The generated
+   libsbp bindings should be the same on all supported Python versions. To use
+   a different version than your default Python interpreter, specify the
+   `GENENV` environment variable, e.g., `GENENV=py27 make all` (you must have
+   that version of Python installed beforehand).
+3. To run both the generator and the Python tests on specific Python versions,
+   specify both envs, e.g., `GENENV=py37 TOXENV=py37 make python`
+
+## SBP Development Procedures
+
+See the ["how to"](HOWTO.md) page for instructions on adding new messages,
+updating the [documentation](docs/sbp.pdf), and releasing new versions of this
+library.
+
+## SBP Protocol Specification
+
+SBP consists of two pieces: (i) an over-the-wire message framing format and
+(ii) structured payload definitions. As of Version 1.0, the packet consists of
+a 6-byte binary header section, a variable-sized payload field, and a 16-bit
+CRC value. SBP uses the CCITT CRC16 (XMODEM implementation) for error
+detection.
+
+Please see [the docs](docs/sbp.pdf) for a full description of the packet
+structure and the message types. Developer documentation for the
+language-specific sbp libraries is [here](http://swift-nav.github.io/libsbp/).
+Please refer to [the changelog](CHANGELOG.md) for more information about the
+evolution of the library and its messages.
+
+## JSON Schema Definitions
+
+For web clients processing SBP in JSON form, JSON schema definitions are
+provided.  Libraries for JavaScript, TypeScript, and Elm generated by the
+[QuickType](https://github.com/quicktype/quicktype) tool are provided.  See the
+HOWTO for instructions on updating these schemas.
+
+## LICENSE
+
+Copyright © 2015-2022 Swift Navigation
+
+Distributed under the [MIT open source license](LICENSE).
